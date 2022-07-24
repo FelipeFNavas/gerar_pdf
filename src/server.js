@@ -2,7 +2,7 @@ import express from "express";
 import ejs from "ejs";
 import path from "path";
 import { fileURLToPath } from "url";
-import pdf from "html-pdf";
+import puppeteer from "puppeteer";
 
 const app = express();
 
@@ -27,6 +27,33 @@ const passengers = [
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.get("/pdf", async (req, res) => {
+  const browser = await puppeteer.launch();
+
+  const page = await browser.newPage();
+
+  await page.goto("http://localhost:3000/", {
+    waitUntil: "networkidle2",
+  });
+
+  const pdf = await page.pdf({
+    printBackground: true,
+    format: "letter",
+    margin: {
+      top: "1cm",
+      right: "1cm",
+      bottom: "1cm",
+      left: "1cm",
+    },
+  });
+
+  await browser.close();
+
+  res.contentType("application/pdf");
+
+  return res.send(pdf);
+});
+
 app.get("/", (req, res) => {
   ejs.renderFile(
     path.join(__dirname, "print.ejs"),
@@ -36,26 +63,8 @@ app.get("/", (req, res) => {
         return res.send(err);
       }
 
-      const options = {
-        height: "11.25in",
-        width: "8.5in",
-        header: {
-          height: "20mm",
-        },
-        footer: {
-          height: "20mm",
-        },
-      };
-
-      // criar pdf
-      pdf.create(html, options).toFile("report.pdf", (err, data) => {
-        if (err) {
-          return res.send(err);
-        }
-
-        // enviar para o navegador
-        return res.send("PDF criado com sucesso!");
-      });
+      // enviar para o navegador
+      return res.send(html);
     }
   );
 });
